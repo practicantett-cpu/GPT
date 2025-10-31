@@ -90,9 +90,14 @@
               "y": { "value": 0 },
               "width":  { "signal": "bandwidth('ftx')" },
               "height": { "signal": "headerH" },
-              "fill": [
-                { "test": "selectedFT && datum.FamilyType===selectedFT", "value": "white" },
-                { "value": "white" }
+              "fill": { "value": "transparent" },
+              "stroke": [
+                { "test": "selectedFT && datum.FamilyType===selectedFT", "value": "#2c3e50" },
+                { "value": "#d0d0d0" }
+              ],
+              "strokeWidth": [
+                { "test": "selectedFT && datum.FamilyType===selectedFT", "value": 2 },
+                { "value": 1 }
               ],
               "cursor": { "value": "pointer" },
               "cornerRadiusTopLeft":     { "value": 0 },
