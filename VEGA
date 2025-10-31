@@ -193,7 +193,8 @@
                   "endAngle": { "value": 6.28318 },
                   "innerRadius": { "signal": "donutInnerRadius" },
                   "outerRadius": { "signal": "donutOuterRadius" },
-                  "fill": { "value": "#d9d9d9" }
+                  "fill": { "value": "#d9d9d9" },
+                  "pointerEvents": { "value": "none" }
                 }
               }
             },
@@ -207,7 +208,8 @@
                   "endAngle": { "signal": "6.28318 * datum.ProgressFraction" },
                   "innerRadius": { "signal": "donutInnerRadius" },
                   "outerRadius": { "signal": "donutOuterRadius" },
-                  "fill": { "field": "ProgressColor" }
+                  "fill": { "field": "ProgressColor" },
+                  "pointerEvents": { "value": "none" }
                 }
               }
             },
@@ -232,32 +234,25 @@
               "type": "text",
               "encode": {
                 "update": {
-                  "x": [
-                    { "test": "ftCardWidth < 120", "signal": "ftCardWidth / 2" },
-                    { "signal": "min(donutCenterXOffset + donutOuterRadius + 16, ftCardWidth - 12)" }
-                  ],
-                  "y": [
-                    { "test": "ftCardWidth < 120", "signal": "headerH/2 - labelGap" },
-                    { "signal": "headerH/2 - labelGap / 2" }
-                  ],
+                  "x": {
+                    "signal": "ftCardWidth < 120 ? ftCardWidth / 2 : min(donutCenterXOffset + donutOuterRadius + 16, ftCardWidth - 12)"
+                  },
+                  "y": {
+                    "signal": "headerH/2 - labelGap/2"
+                  },
                   "text": { "field": "FamilyType" },
                   "font": { "value": "Segoe UI" },
                   "fontSize": { "value": 18 },
                   "fontWeight": { "value": "bold" },
-                  "align": [
-                    { "test": "ftCardWidth < 120", "value": "center" },
-                    { "value": "left" }
-                  ],
-                  "baseline": [
-                    { "test": "ftCardWidth < 120", "value": "bottom" },
-                    { "value": "bottom" }
-                  ],
+                  "align": {
+                    "signal": "ftCardWidth < 120 ? 'center' : 'left'"
+                  },
+                  "baseline": { "value": "bottom" },
                   "fill": { "value": "#333" },
                   "pointerEvents": { "value": "none" },
-                  "limit": [
-                    { "test": "ftCardWidth < 120", "signal": "max(ftCardWidth - 24, 0)" },
-                    { "signal": "max(ftCardWidth - max(donutCenterXOffset + donutOuterRadius + 16, 12) - 16, 0)" }
-                  ]
+                  "limit": {
+                    "signal": "ftCardWidth < 120 ? max(ftCardWidth - 24, 0) : max(ftCardWidth - max(donutCenterXOffset + donutOuterRadius + 16, 12) - 16, 0)"
+                  }
                 }
               }
             },
@@ -265,28 +260,24 @@
               "type": "text",
               "encode": {
                 "update": {
-                  "x": [
-                    { "test": "ftCardWidth < 120", "signal": "ftCardWidth / 2" },
-                    { "signal": "min(donutCenterXOffset + donutOuterRadius + 16, ftCardWidth - 12)" }
-                  ],
-                  "y": [
-                    { "test": "ftCardWidth < 120", "signal": "headerH/2 + labelGap" },
-                    { "signal": "headerH/2 + labelGap / 2" }
-                  ],
+                  "x": {
+                    "signal": "ftCardWidth < 120 ? ftCardWidth / 2 : min(donutCenterXOffset + donutOuterRadius + 16, ftCardWidth - 12)"
+                  },
+                  "y": {
+                    "signal": "headerH/2 + labelGap/2"
+                  },
                   "text": { "field": "CompromiseDateText" },
                   "font": { "value": "Segoe UI" },
                   "fontSize": { "value": 13 },
-                  "align": [
-                    { "test": "ftCardWidth < 120", "value": "center" },
-                    { "value": "left" }
-                  ],
+                  "align": {
+                    "signal": "ftCardWidth < 120 ? 'center' : 'left'"
+                  },
                   "baseline": { "value": "top" },
                   "fill": { "value": "#555" },
                   "pointerEvents": { "value": "none" },
-                  "limit": [
-                    { "test": "ftCardWidth < 120", "signal": "max(ftCardWidth - 24, 0)" },
-                    { "signal": "max(ftCardWidth - max(donutCenterXOffset + donutOuterRadius + 16, 12) - 16, 0)" }
-                  ]
+                  "limit": {
+                    "signal": "ftCardWidth < 120 ? max(ftCardWidth - 24, 0) : max(ftCardWidth - max(donutCenterXOffset + donutOuterRadius + 16, 12) - 16, 0)"
+                  }
                 }
               }
             }
