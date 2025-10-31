@@ -3,13 +3,13 @@
   "description": "Tabla con Family Type como botones (filtro interno). Fondo transparente.",
   "background": "transparent",
   "autosize": { "type": "pad", "contains": "padding" },
-  "padding": { "left": 12, "right": 12, "top": 10, "bottom": 10 },
+  "padding": { "left": 0, "right": 0, "top": 10, "bottom": 10 },
 
   "signals": [
     { "name": "width",  "update": "pbiContainerWidth" },
     { "name": "height", "update": "pbiContainerHeight" },
 
-    { "name": "headerH",      "value": 88 },
+    { "name": "headerH",      "value": 112 },
     { "name": "tableHeaderH", "value": 44 },
     { "name": "rowH",         "value": 72 },
     { "name": "yPadInner",    "value": 0.20 },
@@ -26,6 +26,17 @@
     { "name": "manufX",    "update": "width * 0.96" },
 
     { "name": "tableBodyH", "update": "max(height - headerH - tableHeaderH, 0)" },
+    { "name": "progressBarThickness", "value": 15 },
+    { "name": "ftGap", "value": 10 },
+    {
+      "name": "ftCardWidth",
+      "update": "max(length(data('families')),1) ? max(width - max(length(data('families')) - 1, 0) * ftGap, 0) / max(length(data('families')), 1) : width"
+    },
+    { "name": "donutOuterRadius", "update": "min(ftCardWidth, headerH) * 0.28" },
+    { "name": "donutInnerRadius", "update": "max(donutOuterRadius - progressBarThickness / 2, 0)" },
+    { "name": "donutCenterXOffset", "update": "min(donutOuterRadius + 12, ftCardWidth / 2)" },
+    { "name": "donutCenterY", "update": "headerH / 2" },
+    { "name": "labelGap", "value": 12 },
     {
       "name": "tableScroll",
       "value": 0,
@@ -54,7 +65,7 @@
       "name": "selectedFT",
       "value": null,
       "on": [
-        { "events": "@ftCard:click", "update": "datum.FamilyType" }
+        { "events": "@ftCard:click", "update": "selectedFT===datum.FamilyType ? null : datum.FamilyType" }
       ]
     }
   ],
@@ -73,7 +84,7 @@
         { "type": "formula", "as": "ColorBar",   "expr": "datum['Porcentaje Avance']*100 < 30 ? '#e74c3c' : datum['Porcentaje Avance']*100 < 60 ? '#f39c12' : datum['Porcentaje Avance']*100 < 90 ? '#00b3b3' : '#2c3e50'" },
         { "type": "formula", "as": "FechaFmt",   "expr": "timeFormat(toDate(datum['Compromise date']), '%d-%b-%Y')" },
         { "type": "formula", "as": "ManufacturingText", "expr": "'Manufacturing Date: ' + datum.FechaFmt" },
-        { "type": "collect", "sort": { "field": ["FamilyType", "PO", "Item"], "order": ["ascending", "ascending", "ascending"] } },
+        { "type": "collect", "sort": { "field": ["PO", "Item"], "order": ["ascending", "ascending"] } },
         { "type": "window",  "ops": ["row_number"], "as": ["RowID"] },
         { "type": "filter",  "expr": "selectedFT==null || datum.FamilyType==selectedFT" }
       ]
@@ -89,21 +100,38 @@
         {
           "type": "aggregate",
           "groupby": ["FamilyType"],
-          "ops": ["max"],
-          "fields": ["CompromiseDateValue"],
-          "as": ["CompromiseDateValue"]
+          "ops": ["max", "mean"],
+          "fields": ["CompromiseDateValue", "Porcentaje Avance"],
+          "as": ["CompromiseDateValue", "MeanAvance"]
         },
+        { "type": "collect", "sort": { "field": ["FamilyType"], "order": ["ascending"] } },
+        { "type": "window", "ops": ["row_number"], "as": ["FamilyRank"] },
+        { "type": "formula", "as": "FamilyIndex", "expr": "datum.FamilyRank - 1" },
         {
           "type": "formula",
           "as": "CompromiseDateText",
           "expr": "isValid(datum.CompromiseDateValue) ? timeFormat(datum.CompromiseDateValue, '%d-%b-%Y') : ''"
+        },
+        {
+          "type": "formula",
+          "as": "ProgressFraction",
+          "expr": "isValid(datum.MeanAvance) ? clamp(datum.MeanAvance, 0, 1) : 0"
+        },
+        {
+          "type": "formula",
+          "as": "ProgressPctText",
+          "expr": "format(datum.ProgressFraction * 100, '.0f') + '%'"
+        },
+        {
+          "type": "formula",
+          "as": "ProgressColor",
+          "expr": "datum.ProgressFraction*100 < 30 ? '#e74c3c' : datum.ProgressFraction*100 < 60 ? '#f39c12' : datum.ProgressFraction*100 < 90 ? '#00b3b3' : '#2c3e50'"
         }
       ]
     }
   ],
 
   "scales": [
-    { "name": "ftx",  "type": "band", "domain": { "data": "families", "field": "FamilyType" }, "range": [0, { "signal": "width" }], "padding": 0.04 },
     { "name": "y",    "type": "band", "domain": { "data": "rows", "field": "RowID" }, "range": { "step": { "signal": "rowH" } }, "paddingInner": { "signal": "yPadInner" } },
     { "name": "prog", "type": "linear", "domain": [0, 100], "range": { "signal": "[progLeft, progRight]" } }
   ],
@@ -117,70 +145,152 @@
       "encode": { "update": { "x": { "value": 0 }, "y": { "value": 0 }, "width": { "signal": "width" }, "height": { "signal": "headerH" } } },
       "marks": [
         {
-          "type": "rect",
-          "name": "ftCard",
+          "type": "group",
+          "name": "ftCardGroup",
           "from": { "data": "families" },
           "encode": {
             "update": {
-              "x": { "scale": "ftx", "field": "FamilyType" },
+              "x": { "signal": "datum.FamilyIndex * (ftCardWidth + ftGap)" },
               "y": { "value": 0 },
-              "width":  { "signal": "bandwidth('ftx')" },
-              "height": { "signal": "headerH" },
-              "fill": [
-                { "test": "selectedFT && datum.FamilyType===selectedFT", "value": "white" },
-                { "value": "#E6E6E6" }
-              ],
-              "stroke": { "value": "#d0d0d0" },
-              "strokeWidth": { "value": 1 },
-              "cursor": { "value": "pointer" },
-              "cornerRadiusTopLeft":     { "value": 0 },
-              "cornerRadiusTopRight":    { "value": 14 },
-              "cornerRadiusBottomLeft":  { "value": 0 },
-              "cornerRadiusBottomRight": { "value": 0 }
+              "width": { "signal": "ftCardWidth" },
+              "height": { "signal": "headerH" }
+            }
+          },
+          "marks": [
+            {
+              "type": "rect",
+              "name": "ftCard",
+              "encode": {
+                "update": {
+                  "x": { "value": 0 },
+                  "y": { "value": 0 },
+                  "width": { "signal": "ftCardWidth" },
+                  "height": { "signal": "headerH" },
+                  "fill": [
+                    { "test": "selectedFT && datum.FamilyType===selectedFT", "value": "white" },
+                    { "value": "#E6E6E6" }
+                  ],
+                  "stroke": { "value": "transparent" },
+                  "strokeWidth": { "value": 0 },
+                  "cursor": { "value": "pointer" },
+                  "cornerRadiusTopLeft":     { "value": 0 },
+                  "cornerRadiusTopRight":    { "value": 14 },
+                  "cornerRadiusBottomLeft":  { "value": 0 },
+                  "cornerRadiusBottomRight": { "value": 0 }
+                },
+                "hover": {
+                  "fillOpacity": { "value": 0.9 }
+                }
+              }
             },
-            "hover": {
-              "fillOpacity": { "value": 0.9 }
+            {
+              "type": "arc",
+              "encode": {
+                "update": {
+                  "x": { "signal": "donutCenterXOffset" },
+                  "y": { "signal": "donutCenterY" },
+                  "startAngle": { "value": 0 },
+                  "endAngle": { "value": 6.28318 },
+                  "innerRadius": { "signal": "donutInnerRadius" },
+                  "outerRadius": { "signal": "donutOuterRadius" },
+                  "fill": { "value": "#d9d9d9" }
+                }
+              }
+            },
+            {
+              "type": "arc",
+              "encode": {
+                "update": {
+                  "x": { "signal": "donutCenterXOffset" },
+                  "y": { "signal": "donutCenterY" },
+                  "startAngle": { "value": 0 },
+                  "endAngle": { "signal": "6.28318 * datum.ProgressFraction" },
+                  "innerRadius": { "signal": "donutInnerRadius" },
+                  "outerRadius": { "signal": "donutOuterRadius" },
+                  "fill": { "field": "ProgressColor" }
+                }
+              }
+            },
+            {
+              "type": "text",
+              "encode": {
+                "update": {
+                  "x": { "signal": "donutCenterXOffset" },
+                  "y": { "signal": "donutCenterY" },
+                  "text": { "field": "ProgressPctText" },
+                  "font": { "value": "Segoe UI" },
+                  "fontSize": { "value": 14 },
+                  "fontWeight": { "value": "bold" },
+                  "align": { "value": "center" },
+                  "baseline": { "value": "middle" },
+                  "fill": { "value": "#333" },
+                  "pointerEvents": { "value": "none" }
+                }
+              }
+            },
+            {
+              "type": "text",
+              "encode": {
+                "update": {
+                  "x": [
+                    { "test": "ftCardWidth < 120", "signal": "ftCardWidth / 2" },
+                    { "signal": "min(donutCenterXOffset + donutOuterRadius + 16, ftCardWidth - 12)" }
+                  ],
+                  "y": [
+                    { "test": "ftCardWidth < 120", "signal": "headerH/2 - labelGap" },
+                    { "signal": "headerH/2 - labelGap / 2" }
+                  ],
+                  "text": { "field": "FamilyType" },
+                  "font": { "value": "Segoe UI" },
+                  "fontSize": { "value": 18 },
+                  "fontWeight": { "value": "bold" },
+                  "align": [
+                    { "test": "ftCardWidth < 120", "value": "center" },
+                    { "value": "left" }
+                  ],
+                  "baseline": [
+                    { "test": "ftCardWidth < 120", "value": "bottom" },
+                    { "value": "bottom" }
+                  ],
+                  "fill": { "value": "#333" },
+                  "pointerEvents": { "value": "none" },
+                  "limit": [
+                    { "test": "ftCardWidth < 120", "signal": "max(ftCardWidth - 24, 0)" },
+                    { "signal": "max(ftCardWidth - max(donutCenterXOffset + donutOuterRadius + 16, 12) - 16, 0)" }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "text",
+              "encode": {
+                "update": {
+                  "x": [
+                    { "test": "ftCardWidth < 120", "signal": "ftCardWidth / 2" },
+                    { "signal": "min(donutCenterXOffset + donutOuterRadius + 16, ftCardWidth - 12)" }
+                  ],
+                  "y": [
+                    { "test": "ftCardWidth < 120", "signal": "headerH/2 + labelGap" },
+                    { "signal": "headerH/2 + labelGap / 2" }
+                  ],
+                  "text": { "field": "CompromiseDateText" },
+                  "font": { "value": "Segoe UI" },
+                  "fontSize": { "value": 13 },
+                  "align": [
+                    { "test": "ftCardWidth < 120", "value": "center" },
+                    { "value": "left" }
+                  ],
+                  "baseline": { "value": "top" },
+                  "fill": { "value": "#555" },
+                  "pointerEvents": { "value": "none" },
+                  "limit": [
+                    { "test": "ftCardWidth < 120", "signal": "max(ftCardWidth - 24, 0)" },
+                    { "signal": "max(ftCardWidth - max(donutCenterXOffset + donutOuterRadius + 16, 12) - 16, 0)" }
+                  ]
+                }
+              }
             }
-          }
-        },
-        {
-          "type": "text",
-          "from": { "data": "families" },
-          "encode": {
-            "update": {
-              "x": { "scale": "ftx", "field": "FamilyType", "band": 0, "offset": 12 },
-              "y": { "signal": "headerH/2" },
-              "text": { "field": "FamilyType" },
-              "font": { "value": "Segoe UI" },
-              "fontSize": { "value": 16 },
-              "fontWeight": [
-                { "test": "selectedFT && datum.FamilyType===selectedFT", "value": "bold" },
-                { "value": "bold" }
-              ],
-              "align": { "value": "left" },
-              "baseline": { "value": "middle" },
-              "fill": { "value": "#333" },
-              "cursor": { "value": "pointer" },
-              "pointerEvents": { "value": "none" }
-            }
-          }
-        },
-        {
-          "type": "text",
-          "from": { "data": "families" },
-          "encode": {
-            "update": {
-              "x": { "scale": "ftx", "field": "FamilyType", "band": 0, "offset": 12 },
-              "y": { "signal": "headerH/2 + 20" },
-              "text": { "field": "CompromiseDateText" },
-              "font": { "value": "Segoe UI" },
-              "fontSize": { "value": 13 },
-              "align": { "value": "left" },
-              "baseline": { "value": "top" },
-              "fill": { "value": "#555" },
-              "pointerEvents": { "value": "none" }
-            }
-          }
+          ]
         }
       ]
     },
@@ -236,8 +346,24 @@
         { "type": "text", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "descX" }, "y": { "signal": "scale('y', datum.RowID) - tableScroll + bandwidth('y')/2 - 8" }, "baseline": { "value": "middle" }, "align": { "value": "left" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 17 }, "fill": { "value": "#333" }, "text": { "signal": "datum['Product desc']" } } } },
         { "type": "text", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "descX" }, "y": { "signal": "scale('y', datum.RowID) - tableScroll + bandwidth('y')/2 + 12" }, "baseline": { "value": "top" }, "align": { "value": "left" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 13 }, "fill": { "value": "#888" }, "text": { "field": "ManufacturingText" } } } },
 
-        { "type": "rect", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "progLeft" }, "x2": { "signal": "progRight" }, "y": { "signal": "scale('y', datum.RowID) - tableScroll + bandwidth('y')/2 - 7.5" }, "height": { "value": 15 }, "fill": { "value": "#e6e6e6" }, "cornerRadius": { "value": 8 } } } },
-        { "type": "rect", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "progLeft" }, "x2": { "scale": "prog", "field": "AvancePct" }, "y": { "signal": "scale('y', datum.RowID) - tableScroll + bandwidth('y')/2 - 7.5" }, "height": { "value": 15 }, "fill": { "field": "ColorBar" } } } },
+        { "type": "rect", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "progLeft" }, "x2": { "signal": "progRight" }, "y": { "signal": "scale('y', datum.RowID) - tableScroll + bandwidth('y')/2 - progressBarThickness/2" }, "height": { "signal": "progressBarThickness" }, "fill": { "value": "#e6e6e6" }, "cornerRadius": { "value": 8 } } } },
+        {
+          "type": "rect",
+          "from": { "data": "rows" },
+          "encode": {
+            "update": {
+              "x": { "signal": "progLeft" },
+              "x2": { "scale": "prog", "field": "AvancePct" },
+              "y": { "signal": "scale('y', datum.RowID) - tableScroll + bandwidth('y')/2 - progressBarThickness/2" },
+              "height": { "signal": "progressBarThickness" },
+              "fill": { "field": "ColorBar" },
+              "cornerRadiusTopLeft": { "value": 8 },
+              "cornerRadiusTopRight": { "value": 8 },
+              "cornerRadiusBottomLeft": { "value": 8 },
+              "cornerRadiusBottomRight": { "value": 8 }
+            }
+          }
+        },
         { "type": "text", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "pctTextX" }, "y": { "signal": "scale('y', datum.RowID) - tableScroll + bandwidth('y')/2" }, "baseline": { "value": "middle" }, "align": { "value": "left" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 15 }, "fontWeight": { "value": "bold" }, "fill": { "value": "#333" }, "text": { "field": "AvanceText" } } } },
 
         { "type": "text", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "reqX" }, "y": { "signal": "scale('y', datum.RowID) - tableScroll + bandwidth('y')/2" }, "baseline": { "value": "middle" }, "align": { "value": "center" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 17 }, "fill": { "value": "#333" }, "text": { "signal": "isValid(datum['Nominal Qty']) ? format(datum['Nominal Qty'], '.0f') : ''" } } } },
