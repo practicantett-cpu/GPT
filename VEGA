@@ -3,13 +3,13 @@
   "description": "Tabla con Family Type como botones (filtro interno). Fondo transparente.",
   "background": "transparent",
   "autosize": { "type": "pad", "contains": "padding" },
-  "padding": { "left": 20, "right": 20, "top": 10, "bottom": 10 },
+  "padding": { "left": 12, "right": 12, "top": 10, "bottom": 10 },
 
   "signals": [
     { "name": "width",  "update": "pbiContainerWidth" },
     { "name": "height", "update": "pbiContainerHeight" },
 
-    { "name": "headerH",      "value": 64 },
+    { "name": "headerH",      "value": 88 },
     { "name": "tableHeaderH", "value": 44 },
     { "name": "rowH",         "value": 72 },
     { "name": "yPadInner",    "value": 0.20 },
@@ -18,19 +18,43 @@
     { "name": "poX",       "value": 7 },
     { "name": "itemX",     "value": 105 },
     { "name": "descX",     "value": 195 },
-    { "name": "progLeft",  "value": 510 },
-    { "name": "progRight", "value": 734 },
-    { "name": "pctTextX",  "value": 744 },
-    { "name": "reqX",      "value": 856 },
-    { "name": "execX",     "value": 1045 },
-    { "name": "manufX",    "value": 1265 },
+    { "name": "progLeft",  "update": "width * 0.4" },
+    { "name": "progRight", "update": "width * 0.62" },
+    { "name": "pctTextX",  "update": "width * 0.65" },
+    { "name": "reqX",      "update": "width * 0.74" },
+    { "name": "execX",     "update": "width * 0.86" },
+    { "name": "manufX",    "update": "width * 0.96" },
+
+    { "name": "tableBodyH", "update": "max(height - headerH - tableHeaderH, 0)" },
+    {
+      "name": "tableScroll",
+      "value": 0,
+      "on": [
+        {
+          "events": { "type": "wheel", "markname": "tableBody", "consume": true },
+          "update": "clamp(tableScroll + event.deltaY, 0, max(0, data('rows').length * rowH - tableBodyH))"
+        },
+        {
+          "events": { "signal": "selectedFT" },
+          "update": "0"
+        },
+        {
+          "events": { "signal": "tableBodyH" },
+          "update": "clamp(tableScroll, 0, max(0, data('rows').length * rowH - tableBodyH))"
+        },
+        {
+          "events": [ { "source": "view", "type": "data", "name": "rows" } ],
+          "update": "clamp(tableScroll, 0, max(0, data('rows').length * rowH - tableBodyH))"
+        }
+      ]
+    },
 
     /* selección de Family Type (click para seleccionar / deseleccionar) */
     {
       "name": "selectedFT",
       "value": null,
       "on": [
-        { "events": "@ftCard:click", "update": "selectedFT===datum.FamilyType ? null : datum.FamilyType" }
+        { "events": "@ftCard:click", "update": "datum.FamilyType" }
       ]
     }
   ],
@@ -79,7 +103,7 @@
   ],
 
   "scales": [
-    { "name": "ftx",  "type": "band", "domain": { "data": "families", "field": "FamilyType" }, "range": [0, { "signal": "width" }], "padding": 0.08 },
+    { "name": "ftx",  "type": "band", "domain": { "data": "families", "field": "FamilyType" }, "range": [0, { "signal": "width" }], "padding": 0.04 },
     { "name": "y",    "type": "band", "domain": { "data": "rows", "field": "RowID" }, "range": { "step": { "signal": "rowH" } }, "paddingInner": { "signal": "yPadInner" } },
     { "name": "prog", "type": "linear", "domain": [0, 100], "range": { "signal": "[progLeft, progRight]" } }
   ],
@@ -106,14 +130,8 @@
                 { "test": "selectedFT && datum.FamilyType===selectedFT", "value": "white" },
                 { "value": "#E6E6E6" }
               ],
-              "stroke": [
-                { "test": "selectedFT && datum.FamilyType===selectedFT", "value": "#2c3e50" },
-                { "value": "#E6E6E6" }
-              ],
-              "strokeWidth": [
-                { "test": "selectedFT && datum.FamilyType===selectedFT", "value": 2 },
-                { "value": 1 }
-              ],
+              "stroke": { "value": "#d0d0d0" },
+              "strokeWidth": { "value": 1 },
               "cursor": { "value": "pointer" },
               "cornerRadiusTopLeft":     { "value": 0 },
               "cornerRadiusTopRight":    { "value": 14 },
@@ -130,7 +148,7 @@
           "from": { "data": "families" },
           "encode": {
             "update": {
-              "x": { "scale": "ftx", "field": "FamilyType", "band": 0, "offset": 16 },
+              "x": { "scale": "ftx", "field": "FamilyType", "band": 0, "offset": 12 },
               "y": { "signal": "headerH/2" },
               "text": { "field": "FamilyType" },
               "font": { "value": "Segoe UI" },
@@ -152,8 +170,8 @@
           "from": { "data": "families" },
           "encode": {
             "update": {
-              "x": { "scale": "ftx", "field": "FamilyType", "band": 0, "offset": 16 },
-              "y": { "signal": "headerH/2 + 18" },
+              "x": { "scale": "ftx", "field": "FamilyType", "band": 0, "offset": 12 },
+              "y": { "signal": "headerH/2 + 20" },
               "text": { "field": "CompromiseDateText" },
               "font": { "value": "Segoe UI" },
               "fontSize": { "value": 13 },
@@ -186,13 +204,13 @@
             }
           }
         },
-        { "type": "text", "encode": { "update": { "x": { "value": 7 },   "y": { "signal": "tableHeaderH/2" }, "baseline": { "value": "middle" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 18 }, "fontWeight": { "value": "bold" }, "fill": { "value": "#555" }, "text": { "value": "PO" } } } },
-        { "type": "text", "encode": { "update": { "x": { "value": 127 }, "y": { "signal": "tableHeaderH/2" }, "align": { "value": "center" }, "baseline": { "value": "middle" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 18 }, "fontWeight": { "value": "bold" }, "fill": { "value": "#555" }, "text": { "value": "Item" } } } },
-        { "type": "text", "encode": { "update": { "x": { "value": 195 }, "y": { "signal": "tableHeaderH/2" }, "baseline": { "value": "middle" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 18 }, "fontWeight": { "value": "bold" }, "fill": { "value": "#555" }, "text": { "value": "Product desc" } } } },
-        { "type": "text", "encode": { "update": { "x": { "value": 646 }, "y": { "signal": "tableHeaderH/2" }, "align": { "value": "center" }, "baseline": { "value": "middle" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 18 }, "fontWeight": { "value": "bold" }, "fill": { "value": "#555" }, "text": { "value": "% Executed" } } } },
-        { "type": "text", "encode": { "update": { "x": { "value": 856 }, "y": { "signal": "tableHeaderH/2" }, "align": { "value": "center" }, "baseline": { "value": "middle" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 18 }, "fontWeight": { "value": "bold" }, "fill": { "value": "#555" }, "text": { "value": "Required Qty" } } } },
-        { "type": "text", "encode": { "update": { "x": { "value": 1045 }, "y": { "signal": "tableHeaderH/2" }, "align": { "value": "center" }, "baseline": { "value": "middle" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 18 }, "fontWeight": { "value": "bold" }, "fill": { "value": "#555" }, "text": { "value": "Executed Qty" } } } },
-        { "type": "text", "encode": { "update": { "x": { "value": 1265 }, "y": { "signal": "tableHeaderH/2" }, "align": { "value": "center" }, "baseline": { "value": "middle" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 18 }, "fontWeight": { "value": "bold" }, "fill": { "value": "#555" }, "text": { "value": "Manufacturer" } } } }
+        { "type": "text", "encode": { "update": { "x": { "signal": "poX" },   "y": { "signal": "tableHeaderH/2" }, "baseline": { "value": "middle" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 18 }, "fontWeight": { "value": "bold" }, "fill": { "value": "#555" }, "text": { "value": "PO" }, "align": { "value": "left" } } } },
+        { "type": "text", "encode": { "update": { "x": { "signal": "itemX + 20" }, "y": { "signal": "tableHeaderH/2" }, "align": { "value": "center" }, "baseline": { "value": "middle" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 18 }, "fontWeight": { "value": "bold" }, "fill": { "value": "#555" }, "text": { "value": "Item" } } } },
+        { "type": "text", "encode": { "update": { "x": { "signal": "descX" }, "y": { "signal": "tableHeaderH/2" }, "baseline": { "value": "middle" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 18 }, "fontWeight": { "value": "bold" }, "fill": { "value": "#555" }, "text": { "value": "Product desc" }, "align": { "value": "left" } } } },
+        { "type": "text", "encode": { "update": { "x": { "signal": "(progLeft + progRight)/2" }, "y": { "signal": "tableHeaderH/2" }, "align": { "value": "center" }, "baseline": { "value": "middle" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 18 }, "fontWeight": { "value": "bold" }, "fill": { "value": "#555" }, "text": { "value": "% Executed" } } } },
+        { "type": "text", "encode": { "update": { "x": { "signal": "reqX" }, "y": { "signal": "tableHeaderH/2" }, "align": { "value": "center" }, "baseline": { "value": "middle" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 18 }, "fontWeight": { "value": "bold" }, "fill": { "value": "#555" }, "text": { "value": "Required Qty" } } } },
+        { "type": "text", "encode": { "update": { "x": { "signal": "execX" }, "y": { "signal": "tableHeaderH/2" }, "align": { "value": "center" }, "baseline": { "value": "middle" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 18 }, "fontWeight": { "value": "bold" }, "fill": { "value": "#555" }, "text": { "value": "Executed Qty" } } } },
+        { "type": "text", "encode": { "update": { "x": { "signal": "manufX" }, "y": { "signal": "tableHeaderH/2" }, "align": { "value": "center" }, "baseline": { "value": "middle" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 18 }, "fontWeight": { "value": "bold" }, "fill": { "value": "#555" }, "text": { "value": "Manufacturer" } } } }
       ]
     },
 
@@ -200,30 +218,31 @@
     {
       "type": "group",
       "name": "tableBody",
+      "clip": true,
       "encode": {
         "update": {
           "x": { "value": 0 },
           "y": { "signal": "headerH + tableHeaderH" },
           "width": { "signal": "width" },
-          "height": { "signal": "data('rows').length * rowH" }
+          "height": { "signal": "tableBodyH" }
         }
       },
       "marks": [
-        { "type": "rule", "from": { "data": "rows" }, "encode": { "update": { "x": { "value": 0 }, "x2": { "signal": "width" }, "y": { "signal": "scale('y', datum.RowID) + bandwidth('y')" }, "stroke": { "value": "#e0e0e0" }, "strokeWidth": { "value": 1 } } } },
+        { "type": "rule", "from": { "data": "rows" }, "encode": { "update": { "x": { "value": 0 }, "x2": { "signal": "width" }, "y": { "signal": "scale('y', datum.RowID) - tableScroll + bandwidth('y')" }, "stroke": { "value": "#e0e0e0" }, "strokeWidth": { "value": 1 } } } },
 
-        { "type": "text", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "poX" }, "y": { "signal": "scale('y', datum.RowID) + bandwidth('y')/2" }, "baseline": { "value": "middle" }, "align": { "value": "left" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 17 }, "fill": { "value": "#333" }, "text": { "field": "PO" } } } },
-        { "type": "text", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "itemX" }, "y": { "signal": "scale('y', datum.RowID) + bandwidth('y')/2" }, "baseline": { "value": "middle" }, "align": { "value": "left" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 17 }, "fill": { "value": "#333" }, "text": { "field": "Item" } } } },
+        { "type": "text", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "poX" }, "y": { "signal": "scale('y', datum.RowID) - tableScroll + bandwidth('y')/2" }, "baseline": { "value": "middle" }, "align": { "value": "left" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 17 }, "fill": { "value": "#333" }, "text": { "field": "PO" } } } },
+        { "type": "text", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "itemX" }, "y": { "signal": "scale('y', datum.RowID) - tableScroll + bandwidth('y')/2" }, "baseline": { "value": "middle" }, "align": { "value": "left" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 17 }, "fill": { "value": "#333" }, "text": { "field": "Item" } } } },
 
-        { "type": "text", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "descX" }, "y": { "signal": "scale('y', datum.RowID) + bandwidth('y')/2 - 8" }, "baseline": { "value": "middle" }, "align": { "value": "left" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 17 }, "fill": { "value": "#333" }, "text": { "signal": "datum['Product desc']" } } } },
-        { "type": "text", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "descX" }, "y": { "signal": "scale('y', datum.RowID) + bandwidth('y')/2 + 12" }, "baseline": { "value": "top" }, "align": { "value": "left" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 13 }, "fill": { "value": "#888" }, "text": { "field": "ManufacturingText" } } } },
+        { "type": "text", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "descX" }, "y": { "signal": "scale('y', datum.RowID) - tableScroll + bandwidth('y')/2 - 8" }, "baseline": { "value": "middle" }, "align": { "value": "left" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 17 }, "fill": { "value": "#333" }, "text": { "signal": "datum['Product desc']" } } } },
+        { "type": "text", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "descX" }, "y": { "signal": "scale('y', datum.RowID) - tableScroll + bandwidth('y')/2 + 12" }, "baseline": { "value": "top" }, "align": { "value": "left" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 13 }, "fill": { "value": "#888" }, "text": { "field": "ManufacturingText" } } } },
 
-        { "type": "rect", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "progLeft" }, "x2": { "signal": "progRight" }, "y": { "signal": "scale('y', datum.RowID) + bandwidth('y')/2 - 7.5" }, "height": { "value": 15 }, "fill": { "value": "#e6e6e6" }, "cornerRadius": { "value": 8 } } } },
-        { "type": "rect", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "progLeft" }, "x2": { "scale": "prog", "field": "AvancePct" }, "y": { "signal": "scale('y', datum.RowID) + bandwidth('y')/2 - 7.5" }, "height": { "value": 15 }, "fill": { "field": "ColorBar" } } } },
-        { "type": "text", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "pctTextX" }, "y": { "signal": "scale('y', datum.RowID) + bandwidth('y')/2" }, "baseline": { "value": "middle" }, "align": { "value": "left" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 15 }, "fontWeight": { "value": "bold" }, "fill": { "value": "#333" }, "text": { "field": "AvanceText" } } } },
+        { "type": "rect", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "progLeft" }, "x2": { "signal": "progRight" }, "y": { "signal": "scale('y', datum.RowID) - tableScroll + bandwidth('y')/2 - 7.5" }, "height": { "value": 15 }, "fill": { "value": "#e6e6e6" }, "cornerRadius": { "value": 8 } } } },
+        { "type": "rect", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "progLeft" }, "x2": { "scale": "prog", "field": "AvancePct" }, "y": { "signal": "scale('y', datum.RowID) - tableScroll + bandwidth('y')/2 - 7.5" }, "height": { "value": 15 }, "fill": { "field": "ColorBar" } } } },
+        { "type": "text", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "pctTextX" }, "y": { "signal": "scale('y', datum.RowID) - tableScroll + bandwidth('y')/2" }, "baseline": { "value": "middle" }, "align": { "value": "left" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 15 }, "fontWeight": { "value": "bold" }, "fill": { "value": "#333" }, "text": { "field": "AvanceText" } } } },
 
-        { "type": "text", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "reqX" }, "y": { "signal": "scale('y', datum.RowID) + bandwidth('y')/2" }, "baseline": { "value": "middle" }, "align": { "value": "center" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 17 }, "fill": { "value": "#333" }, "text": { "signal": "isValid(datum['Nominal Qty']) ? format(datum['Nominal Qty'], '.0f') : ''" } } } },
-        { "type": "text", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "execX" }, "y": { "signal": "scale('y', datum.RowID) + bandwidth('y')/2" }, "baseline": { "value": "middle" }, "align": { "value": "center" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 17 }, "fill": { "value": "#333" }, "text": { "signal": "isValid(datum['Executed Qty']) ? format(datum['Executed Qty'], '.0f') : ''" } } } },
-        { "type": "text", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "manufX" }, "y": { "signal": "scale('y', datum.RowID) + bandwidth('y')/2" }, "baseline": { "value": "middle" }, "align": { "value": "center" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 17 }, "fill": { "value": "#333" }, "text": { "field": "Manufacturer" } } } }
+        { "type": "text", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "reqX" }, "y": { "signal": "scale('y', datum.RowID) - tableScroll + bandwidth('y')/2" }, "baseline": { "value": "middle" }, "align": { "value": "center" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 17 }, "fill": { "value": "#333" }, "text": { "signal": "isValid(datum['Nominal Qty']) ? format(datum['Nominal Qty'], '.0f') : ''" } } } },
+        { "type": "text", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "execX" }, "y": { "signal": "scale('y', datum.RowID) - tableScroll + bandwidth('y')/2" }, "baseline": { "value": "middle" }, "align": { "value": "center" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 17 }, "fill": { "value": "#333" }, "text": { "signal": "isValid(datum['Executed Qty']) ? format(datum['Executed Qty'], '.0f') : ''" } } } },
+        { "type": "text", "from": { "data": "rows" }, "encode": { "update": { "x": { "signal": "manufX" }, "y": { "signal": "scale('y', datum.RowID) - tableScroll + bandwidth('y')/2" }, "baseline": { "value": "middle" }, "align": { "value": "center" }, "font": { "value": "Segoe UI" }, "fontSize": { "value": 17 }, "fill": { "value": "#333" }, "text": { "field": "Manufacturer" } } } }
       ]
     }
   ],
